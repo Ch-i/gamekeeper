@@ -80,3 +80,37 @@ def vendor(mac: str) -> str:
 
 def table_size() -> int:
     return len(_table())
+
+
+@lru_cache(maxsize=512)
+def vendor_online(mac: str) -> str:
+    """Look the OUI up against an online MAC-vendor registry (richer/newer than the
+    bundled table). Used on demand by `identify`, never in the hot scan path. Returns
+    '' for randomized/private MACs or on any failure. Results are cached."""
+    import json
+    import urllib.request
+
+    h = _norm(mac)
+    if len(h) < 6 or is_randomized(mac):
+        return ""
+    # 1) maclookup.app (JSON: company, country)
+    try:
+        req = urllib.request.Request(f"https://api.maclookup.app/v2/macs/{h[:6]}",
+                                     headers={"User-Agent": "gamekeeper"})
+        with urllib.request.urlopen(req, timeout=8) as r:
+            d = json.loads(r.read().decode("utf-8", "replace"))
+        if d.get("success") and d.get("company"):
+            return d["company"].strip()
+    except Exception:
+        pass
+    # 2) macvendors.com (plain text)
+    try:
+        req = urllib.request.Request(f"https://api.macvendors.com/{h[:6]}",
+                                     headers={"User-Agent": "gamekeeper"})
+        with urllib.request.urlopen(req, timeout=8) as r:
+            txt = r.read().decode("utf-8", "replace").strip()
+        if txt and "errors" not in txt.lower():
+            return txt
+    except Exception:
+        pass
+    return ""

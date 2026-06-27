@@ -112,9 +112,10 @@ class Store:
             return gone
 
     def set_label(self, mac: str, label: str = None, trust: str = None, notes: str = None,
-                  dtype: str = None):
+                  dtype: str = None, vendor: str = None):
         sets, args = [], []
-        for col, val in (("label", label), ("trust", trust), ("notes", notes), ("dtype", dtype)):
+        for col, val in (("label", label), ("trust", trust), ("notes", notes),
+                         ("dtype", dtype), ("vendor", vendor)):
             if val is not None:
                 sets.append(f"{col}=?"); args.append(val)
         if not sets:
