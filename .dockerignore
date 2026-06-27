@@ -1,0 +1,11 @@
+.git
+**/__pycache__
+**/*.pyc
+**/*.sqlite
+gamekeeper/state
+*.pcap
+*.pcapng
+.venv
+venv
+.idea
+.vscode

@@ -139,6 +139,16 @@ def _report(args) -> int:
     return report.cli(args)
 
 
+def _label_auto(args) -> int:
+    from . import labeler
+    return labeler.cli(args)
+
+
+def _capture(args) -> int:
+    from . import capture
+    return capture.cli(args)
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="gamekeeper",
                                 description="Know who's on your land, and keep it safe.")
@@ -156,6 +166,10 @@ def main(argv=None) -> int:
     lb.add_argument("name", nargs="?", default=None, help="human label")
     lb.add_argument("--trust", choices=["known", "guest", "unknown", "blocked"], default=None)
     lb.add_argument("--notes", default=None)
+
+    la = sub.add_parser("label-auto", help="let the LLM name + type every device (one call)")
+    la.add_argument("--all", action="store_true", help="relabel even already-labelled devices")
+    la.add_argument("--json", action="store_true")
 
     w = sub.add_parser("watch", help="rescan on an interval; log arrivals/departures")
     w.add_argument("--interval", type=int, default=None, help="seconds (default %d)" % config.WATCH_INTERVAL)
@@ -184,10 +198,18 @@ def main(argv=None) -> int:
     rp.add_argument("target", help="IP, MAC, or label")
     rp.add_argument("--json", action="store_true")
 
+    cp = sub.add_parser("capture", help="Wireshark-style packet capture → .pcap + summary")
+    cp.add_argument("--iface", default=None, help="interface (default: first LAN iface)")
+    cp.add_argument("--seconds", type=int, default=20)
+    cp.add_argument("--out", default=None, help="output .pcap path")
+    cp.add_argument("--bpf", default=None, help="BPF filter, e.g. 'host 192.168.1.42'")
+    cp.add_argument("--summary", action="store_true", help="print protocol breakdown (tshark)")
+
     args = p.parse_args(argv)
     return {
-        "scan": _scan, "list": _list, "label": _label, "watch": _watch, "serve": _serve,
-        "monitor": _monitor, "honeypot": _honeypot, "ban": _ban, "report": _report,
+        "scan": _scan, "list": _list, "label": _label, "label-auto": _label_auto,
+        "watch": _watch, "serve": _serve, "monitor": _monitor, "honeypot": _honeypot,
+        "ban": _ban, "report": _report, "capture": _capture,
     }[args.cmd](args)
 
 

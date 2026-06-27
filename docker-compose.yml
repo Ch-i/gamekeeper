@@ -1,0 +1,48 @@
+# gamekeeper stack.  All services share one inventory volume.
+#
+#   docker compose up -d                 # dashboard + honeypot
+#   docker compose --profile wifi up -d  # + Wi-Fi WIDS (needs the AWUS036 plugged in)
+#
+# host networking is required so the containers see the real LAN neighbour table, bind the
+# honeypot's decoy ports, and reach the Wi-Fi stack. Linux host only.
+
+services:
+  dashboard:
+    build: .
+    image: gamekeeper:latest
+    container_name: gamekeeper
+    network_mode: host
+    cap_add: [NET_ADMIN, NET_RAW]
+    volumes: [gkdata:/data]
+    command: ["serve", "--host", "0.0.0.0"]   # http://<host>:8278
+    restart: unless-stopped
+
+  honeypot:
+    image: gamekeeper:latest
+    container_name: gamekeeper-honeypot
+    network_mode: host                         # bind the well-known decoy ports on the host
+    cap_add: [NET_ADMIN, NET_RAW]
+    volumes: [gkdata:/data]
+    command: ["honeypot"]
+    restart: unless-stopped
+    depends_on: [dashboard]
+
+  # Wi-Fi WIDS — only with the AWUS036 (RTL8812AU). Enable with: --profile wifi
+  # The host must have the rtl8812au driver loaded; bring the card to monitor mode with
+  # `airmon-ng start <iface>` (host or container), then point GAMEKEEPER_MON_IFACE at it.
+  monitor:
+    image: gamekeeper:latest
+    container_name: gamekeeper-monitor
+    profiles: [wifi]
+    network_mode: host
+    privileged: true                           # monitor mode needs full Wi-Fi access
+    volumes: [gkdata:/data]
+    devices:
+      - /dev/bus/usb:/dev/bus/usb              # AWUS036 USB passthrough
+    environment:
+      - GAMEKEEPER_MON_IFACE=${GAMEKEEPER_MON_IFACE:-wlan0mon}
+    command: ["monitor", "--iface", "${GAMEKEEPER_MON_IFACE:-wlan0mon}"]
+    restart: unless-stopped
+
+volumes:
+  gkdata:

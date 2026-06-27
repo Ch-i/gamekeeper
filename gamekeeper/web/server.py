@@ -60,6 +60,12 @@ class Handler(BaseHTTPRequestHandler):
             from ..cli import run_scan
             run_scan(self.store, active=bool(data.get("active")))
             return self._send(200, json.dumps(_state(self.store), default=str))
+        if self.path == "/api/autolabel":
+            from ..labeler import autolabel
+            res = autolabel(self.store, relabel_all=bool(data.get("all")))
+            st = _state(self.store)
+            st["autolabel"] = res
+            return self._send(200, json.dumps(st, default=str))
         if self.path == "/api/label":
             mac = (data.get("mac") or "").upper()
             if mac and self.store.device(mac):

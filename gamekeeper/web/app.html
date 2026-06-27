@@ -71,6 +71,7 @@
 <div class="bar">
   <button class="solid" id="scan">Scan now</button>
   <button id="active" title="ping-sweep with nmap (louder)">Deep scan</button>
+  <button id="autolabel" title="let the LLM name + type every device">✦ Auto-label</button>
   <label style="margin-left:auto"><input type="checkbox" id="auto" checked> auto-refresh</label>
   <span id="when"></span>
 </div>
@@ -147,6 +148,11 @@ async function scan(active){const b=active?$("#active"):$("#scan");const o=b.tex
   b.textContent="scanning…";await fetch("/api/scan",{method:"POST",
   headers:{"Content-Type":"application/json"},body:JSON.stringify({active})});b.textContent=o;load();}
 $("#scan").onclick=()=>scan(false); $("#active").onclick=()=>scan(true);
+$("#autolabel").onclick=async()=>{const b=$("#autolabel"),o=b.textContent;b.textContent="labelling…";
+  try{const r=await(await fetch("/api/autolabel",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({all:true})})).json();
+    if(r.autolabel&&r.autolabel.source==="none")alert("No LLM available — install saddlerFitter or the claude CLI.");}
+  finally{b.textContent=o;load();}};
 setInterval(()=>{if($("#auto").checked)load();},15000);
 load();
 </script>
