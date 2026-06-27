@@ -33,6 +33,14 @@ CREATE TABLE IF NOT EXISTS bans (
   id INTEGER PRIMARY KEY, ts TEXT, ip TEXT, mac TEXT, reason TEXT,
   rule TEXT, applied INTEGER DEFAULT 0, released INTEGER DEFAULT 0, decided_by TEXT
 );
+CREATE TABLE IF NOT EXISTS llm_calls (
+  id INTEGER PRIMARY KEY, ts TEXT, purpose TEXT, model TEXT, source TEXT,
+  prompt TEXT, response TEXT, ok INTEGER DEFAULT 1
+);
+CREATE TABLE IF NOT EXISTS captures (
+  id INTEGER PRIMARY KEY, ts TEXT, iface TEXT, seconds INTEGER, pcap TEXT,
+  bytes INTEGER, summary TEXT
+);
 """
 
 
@@ -146,6 +154,29 @@ class Store:
         q = "SELECT * FROM bans" + (" WHERE released=0" if active_only else "") + " ORDER BY id DESC"
         with self._con() as c:
             return [dict(r) for r in c.execute(q)]
+
+    # --- LLM call log (every prompt + response is recorded for transparency) -----
+    def add_llm_call(self, purpose, model, source, prompt, response, ok, now):
+        with self._con() as c:
+            c.execute("INSERT INTO llm_calls(ts,purpose,model,source,prompt,response,ok)"
+                      " VALUES (?,?,?,?,?,?,?)",
+                      (now, purpose, model, source, prompt, response, int(ok)))
+
+    def llm_calls(self, limit=40) -> list[dict]:
+        with self._con() as c:
+            return [dict(r) for r in c.execute(
+                "SELECT * FROM llm_calls ORDER BY id DESC LIMIT ?", (limit,))]
+
+    # --- packet captures ---------------------------------------------------------
+    def add_capture(self, iface, seconds, pcap, nbytes, summary, now):
+        with self._con() as c:
+            c.execute("INSERT INTO captures(ts,iface,seconds,pcap,bytes,summary)"
+                      " VALUES (?,?,?,?,?,?)", (now, iface, seconds, pcap, nbytes, summary))
+
+    def captures(self, limit=20) -> list[dict]:
+        with self._con() as c:
+            return [dict(r) for r in c.execute(
+                "SELECT * FROM captures ORDER BY id DESC LIMIT ?", (limit,))]
 
     def counts(self) -> dict:
         with self._con() as c:

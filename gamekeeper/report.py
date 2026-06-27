@@ -13,9 +13,8 @@ action. Any recommendation it makes (watch / isolate / block) is for the human t
 from __future__ import annotations
 
 import json
-import shutil
-import subprocess
 
+from . import llm
 from .store import Store
 
 PROMPT = """You are a home-network defence analyst. From the EVIDENCE about ONE device, \
@@ -31,26 +30,6 @@ EVIDENCE:
 {ev}"""
 
 
-def _llm(prompt: str) -> str | None:
-    # 1) pair with saddlerFitter's harness if it's importable
-    try:
-        from saddlerfitter.llm import run_agent  # type: ignore
-        return run_agent(prompt, model="sonnet")
-    except Exception:
-        pass
-    # 2) else the local claude CLI (same "local auth, no API keys" seam)
-    claude = shutil.which("claude")
-    if claude:
-        try:
-            r = subprocess.run([claude, "-p", prompt, "--output-format", "text"],
-                               capture_output=True, text=True, timeout=120)
-            if r.returncode == 0 and r.stdout.strip():
-                return r.stdout.strip()
-        except Exception:
-            pass
-    return None
-
-
 def evidence(store: Store, mac: str) -> dict:
     d = store.device(mac) or {}
     ip = d.get("ip")
@@ -63,7 +42,8 @@ def build(store: Store, mac: str) -> dict:
     bundle = evidence(store, mac)
     if not bundle["device"]:
         return {"error": "unknown device"}
-    text = _llm(PROMPT.format(ev=json.dumps(bundle, indent=2, default=str)))
+    text = llm.run(PROMPT.format(ev=json.dumps(bundle, indent=2, default=str)),
+                   store=store, purpose=f"report:{mac}")
     return {"device": bundle["device"], "evidence": bundle, "report": text,
             "source": "llm" if text else "evidence-only"}
 

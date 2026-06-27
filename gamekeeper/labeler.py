@@ -73,7 +73,8 @@ def autolabel(store: Store | None = None, *, relabel_all=False) -> dict:
     payload = [{"mac": d["mac"], "ip": d.get("ip"), "vendor": d.get("vendor"),
                 "hostname": d.get("hostname"), "randomized": bool(d.get("randomized")),
                 "guess_type": d.get("dtype")} for d in devs]
-    out = llm.run(PROMPT.format(devs=json.dumps(payload, indent=2)))
+    out = llm.run(PROMPT.format(devs=json.dumps(payload, indent=2)),
+                  store=store, purpose="label-auto")
     arr = _extract_json(out) or []
     labelled = []
     for r in arr:

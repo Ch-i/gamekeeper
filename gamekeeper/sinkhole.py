@@ -109,6 +109,31 @@ def run_honeypot(ports=None, store=None, block=True):
         print("\n  stopped.")
 
 
+def _listening_ports() -> set[int]:
+    """Ports in LISTEN state on this host (from /proc/net/tcp[6]; works in a host-net
+    container)."""
+    ports: set[int] = set()
+    for path in ("/proc/net/tcp", "/proc/net/tcp6"):
+        try:
+            with open(path) as fh:
+                next(fh)
+                for line in fh:
+                    p = line.split()
+                    if len(p) > 3 and p[3] == "0A":  # 0A = TCP_LISTEN
+                        ports.add(int(p[1].split(":")[1], 16))
+        except OSError:
+            continue
+    return ports
+
+
+def status() -> dict:
+    """Which decoy ports are armed, for the dashboard."""
+    live = _listening_ports()
+    ports = [{"port": p, "service": s, "listening": p in live}
+             for p, s in sorted(DECOYS.items()) if p not in NEVER_BIND]
+    return {"armed": sum(1 for x in ports if x["listening"]), "ports": ports}
+
+
 def cli(args) -> int:
     if getattr(args, "status", False):
         store = Store()

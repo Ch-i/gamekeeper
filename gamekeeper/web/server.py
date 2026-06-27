@@ -9,7 +9,7 @@ import json
 import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from .. import config
+from .. import config, llm, sinkhole
 from ..store import Store
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
@@ -22,6 +22,10 @@ def _state(store: Store) -> dict:
         "events": store.events(120),
         "probes": store.probes(120),
         "bans": store.bans(),
+        "llm": llm.which(),
+        "llm_calls": store.llm_calls(40),
+        "honeypot": sinkhole.status(),
+        "captures": store.captures(20),
         "monitor": {"iface": config.MON_IFACE or "",
                     "tools": {"airmon-ng": bool(config.AIRMON_BIN), "iw": bool(config.IW_BIN),
                               "tshark": bool(config.TSHARK_BIN), "tcpdump": bool(config.TCPDUMP_BIN)}},
@@ -60,6 +64,23 @@ class Handler(BaseHTTPRequestHandler):
             from ..cli import run_scan
             run_scan(self.store, active=bool(data.get("active")))
             return self._send(200, json.dumps(_state(self.store), default=str))
+        if self.path == "/api/capture":
+            import time
+            from .. import capture
+            capdir = os.path.join(os.path.dirname(config.DB_PATH), "captures")
+            os.makedirs(capdir, exist_ok=True)
+            secs = min(int(data.get("seconds", 10) or 10), 120)
+            out = os.path.join(capdir, f"cap-{int(time.time())}.pcap")
+            res = capture.capture(iface=data.get("iface"), seconds=secs, out=out, bpf=data.get("bpf", ""))
+            summ = res.get("summary") or (capture.summary_of(res["pcap"]) if res.get("ok") else "")
+            nbytes = os.path.getsize(res["pcap"]) if res.get("ok") and os.path.exists(res["pcap"]) else 0
+            from datetime import datetime, timezone
+            self.store.add_capture(res.get("iface"), secs, res.get("pcap") or "", nbytes,
+                                   summ or res.get("error", ""),
+                                   datetime.now(timezone.utc).isoformat(timespec="seconds"))
+            st = _state(self.store)
+            st["capture"] = {**res, "summary": summ, "bytes": nbytes}
+            return self._send(200, json.dumps(st, default=str))
         if self.path == "/api/autolabel":
             from ..labeler import autolabel
             res = autolabel(self.store, relabel_all=bool(data.get("all")))

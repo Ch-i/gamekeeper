@@ -44,15 +44,32 @@ Optional tools unlock modules as you add them: `nmap` (deep scan), `aircrack-ng`
 (Wi-Fi WIDS), `nftables` (bans). For the **local LLM labelling / reports**, install
 [saddlerFitter](https://github.com/Ch-i/saddlerFitter) or the `claude` CLI — no API keys.
 
-## Run it with Docker (recommended — bundles the whole toolset)
+## The LLM is a local, authenticated CLI — never an API key
 
-The image ships `tshark` (Wireshark), `nmap`, `aircrack-ng`, `tcpdump`, and `nftables`, so
-capture, honeypot, and Wi-Fi WIDS work with nothing installed on the host.
+LLM labelling (`label-auto`) and behaviour reports go through a CLI already signed in on
+the machine — the `claude` CLI, the `codex` CLI, or saddlerFitter's harness. No keys are
+read or sent. The dashboard shows which CLI is in use, and **logs every prompt + response**
+in the *LLM activity* panel so you can see exactly what was asked and answered.
+
+Because that auth lives on the host, the **dashboard runs on the host** (where `claude`
+is), while the **honeypot and the capture/Wi-Fi tools run in Docker**. Capture
+automatically bridges into the container's `tshark`/`tcpdump`, so the Wireshark panel works
+even though the host has no capture tools.
+
+## Run it (recommended hybrid)
+
+The image ships `tshark` (Wireshark), `nmap`, `aircrack-ng`, `tcpdump`, and `nftables`.
 
 ```bash
-docker compose up -d                 # dashboard (http://<host>:8278) + honeypot
+docker compose up -d honeypot        # honeypot + capture tools in a container
+gamekeeper serve --host 0.0.0.0      # dashboard on the host (uses your local claude CLI)
+#   → http://<host>:8278
 docker compose --profile wifi up -d  # + Wi-Fi WIDS — needs the AWUS036 plugged in
 ```
+
+Or run the dashboard in Docker too (`docker compose up -d`) if you don't need LLM
+labelling in-container — capture, honeypot, and WIDS still work; run `gamekeeper label-auto`
+on the host for LLM labels.
 
 - **Host networking** so the containers see your real LAN, bind the honeypot's decoy
   ports, and reach the Wi-Fi stack (Linux host).
