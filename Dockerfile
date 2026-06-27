@@ -6,8 +6,13 @@ ENV DEBIAN_FRONTEND=noninteractive
 # let dumpcap run without root inside the container
 RUN echo "wireshark-common wireshark-common/install-setuid boolean true" | debconf-set-selections \
  && apt-get update && apt-get install -y --no-install-recommends \
-      nmap tshark tcpdump aircrack-ng iw iproute2 iptables nftables ca-certificates \
+      nmap tshark tcpdump aircrack-ng iw iproute2 iptables nftables ca-certificates curl \
  && rm -rf /var/lib/apt/lists/*
+
+# The locally-authenticated LLM CLI. Only the binary is baked in — the credentials are
+# mounted at runtime (compose: ~/.claude), never copied into the image.
+RUN curl -fsSL https://claude.ai/install.sh | bash
+ENV PATH="/root/.local/bin:${PATH}"
 
 WORKDIR /app
 COPY pyproject.toml README.md ./

@@ -44,20 +44,25 @@ def _gamekeeper_container() -> str:
 def capture(iface=None, seconds=20, out=None, bpf="") -> dict:
     iface = iface or _default_iface()
     out = out or f"/tmp/gamekeeper-{iface}-{_tag()}.pcap"
-    summary = ""
-    # 1) capture locally if we have the tools + privilege
-    if _can_local():
-        if config.TSHARK_BIN:
-            cmd = [config.TSHARK_BIN, "-i", iface, "-a", f"duration:{seconds}", "-w", out]
+    summary, err = "", ""
+    root = hasattr(os, "geteuid") and os.geteuid() == 0
+    # 1) capture in-process if we're privileged. tcpdump writes as root without dropping
+    #    privilege (tshark/dumpcap drop to a restricted user and fail on bind-mounted dirs),
+    #    so prefer tcpdump for the write and use tshark only to summarise the saved file.
+    if root and (config.TCPDUMP_BIN or config.TSHARK_BIN):
+        if config.TCPDUMP_BIN:
+            cmd = ["timeout", str(seconds), config.TCPDUMP_BIN, "-i", iface, "-w", out, "-n"]
+            if bpf:
+                cmd += bpf.split()
         else:
-            cmd = [config.TCPDUMP_BIN, "-i", iface, "-w", out, "-G", str(seconds), "-W", "1"]
-        if bpf:
-            cmd.append(bpf)
+            cmd = [config.TSHARK_BIN, "-i", iface, "-a", f"duration:{seconds}", "-w", out]
         try:
-            r = subprocess.run(cmd, capture_output=True, text=True, timeout=seconds + 20)
+            r = subprocess.run(cmd, capture_output=True, text=True, timeout=seconds + 25)
             err = r.stderr.strip()[:200]
         except Exception as e:
             err = str(e)
+        if config.TSHARK_BIN and os.path.exists(out):
+            summary = summary_of(out)
     else:
         # 2) bridge into the running gamekeeper container (has tshark + NET_RAW); it writes
         #    to the shared /data volume, which is this host's gamekeeper/state dir.

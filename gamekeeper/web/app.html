@@ -3,187 +3,239 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
 <title>gamekeeper</title>
 <style>
+  /* Apple Human Interface Guidelines — system typography, grouped lists, system colors. */
   :root{
-    --bg:#FAFAF8; --panel:#ffffff; --ink:#17181b; --muted:#74757c; --faint:#9a9ba1;
-    --line:#ececec; --accent:#2f6b4f; --up:#2f6b4f; --warn:#b5862b; --bad:#a23b3b;
-    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --bg:#f2f2f7; --card:#fff; --card2:#fbfbfd;
+    --label:#1d1d1f; --label2:rgba(60,60,67,.60); --label3:rgba(60,60,67,.30);
+    --sep:rgba(60,60,67,.16); --fill:rgba(120,120,128,.12); --fill2:rgba(120,120,128,.20);
+    --blue:#007aff; --green:#34c759; --orange:#ff9500; --red:#ff3b30; --gray:#8e8e93;
+    --r:12px; --r2:10px;
+    --mono:ui-monospace,"SF Mono",Menlo,monospace;
+    --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Helvetica Neue",sans-serif;
   }
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--ink);
-    font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;
+  @media (prefers-color-scheme: dark){:root{
+    --bg:#000; --card:#1c1c1e; --card2:#2c2c2e; --label:#f5f5f7;
+    --label2:rgba(235,235,245,.60); --label3:rgba(235,235,245,.30);
+    --sep:rgba(84,84,88,.55); --fill:rgba(120,120,128,.24); --fill2:rgba(120,120,128,.36);
+  }}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:var(--bg);color:var(--label);font:15px/1.45 var(--font);
     -webkit-font-smoothing:antialiased}
-  header{display:flex;align-items:baseline;gap:18px;padding:22px 30px 18px;border-bottom:1px solid var(--line)}
-  .word{font-size:20px;font-weight:680;letter-spacing:-.02em}
-  .tag{color:var(--muted);font-size:13px}
-  .stats{margin-left:auto;display:flex;gap:26px;align-items:baseline}
-  .stat b{font-size:19px;font-weight:680} .stat span{color:var(--faint);font-size:11px;
-    text-transform:uppercase;letter-spacing:.08em;margin-left:6px}
-  button{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);
-    padding:7px 14px;border-radius:6px;cursor:pointer}
-  button:hover{border-color:var(--accent);color:var(--accent)}
-  button.solid{background:var(--accent);color:#fff;border-color:var(--accent)}
-  .bar{display:flex;gap:10px;align-items:center;padding:14px 30px;color:var(--muted);font-size:13px}
-  .wrap{display:grid;grid-template-columns:1fr 360px;gap:24px;padding:6px 30px 40px}
-  @media(max-width:960px){.wrap{grid-template-columns:1fr}}
-  h2{font-size:12px;font-weight:640;text-transform:uppercase;letter-spacing:.09em;
-    color:var(--faint);margin:18px 2px 12px}
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(248px,1fr));gap:12px}
-  .card{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:8px;
-    padding:14px 15px 13px 18px;overflow:hidden}
-  .card:before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--faint)}
-  .card.known:before{background:var(--up)} .card.guest:before{background:var(--warn)}
-  .card.blocked:before{background:var(--bad)} .card.unknown:before{background:#d8d8d6}
-  .row1{display:flex;align-items:center;gap:9px}
-  .badge{font:600 10px/1 var(--mono);color:var(--muted);border:1px solid var(--line);
-    border-radius:4px;padding:4px 5px;letter-spacing:.04em}
-  .dot{width:8px;height:8px;border-radius:50%;flex:none}
-  .dot.up{background:var(--up)} .dot.away{background:transparent;border:1.5px solid #cfcfce}
-  .label{font-weight:620;font-size:15px;outline:none;flex:1;min-width:0;
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .label:focus{box-shadow:inset 0 -2px 0 var(--accent)}
-  .meta{color:var(--muted);font-size:12.5px;margin-top:7px}
-  .mac{font-family:var(--mono);font-size:11px;color:var(--faint);margin-top:3px}
-  .ctl{display:flex;gap:6px;margin-top:10px;opacity:0;transition:.12s}
-  .card:hover .ctl{opacity:1}
-  .ctl select,.ctl a{font-size:11px;color:var(--muted);border:1px solid var(--line);
-    border-radius:5px;padding:3px 7px;background:var(--panel);text-decoration:none}
-  .ctl a:hover{color:var(--accent);border-color:var(--accent)}
-  .rail .panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;
-    padding:6px 14px;margin-bottom:16px}
-  .feed{font-size:13px} .feed li{list-style:none;padding:9px 0;border-bottom:1px solid var(--line);
-    display:flex;gap:9px} .feed li:last-child{border:0}
-  .feed .k{font:600 10px/1.6 var(--mono);color:var(--faint);text-transform:uppercase;flex:none;width:64px}
-  .feed .k.notice{color:var(--accent)} .feed .k.warn{color:var(--warn)} .feed .k.bad{color:var(--bad)}
-  .feed time{color:var(--faint);font-size:11px;margin-left:auto;flex:none}
-  .empty{color:var(--faint);font-size:13px;padding:14px 2px}
-  footer{color:var(--faint);font-size:12px;padding:16px 30px 30px;border-top:1px solid var(--line)}
-  .mono{font-family:var(--mono)}
-  .llmbadge{color:var(--muted);font-size:12px;font-family:var(--mono)}
-  .ports{display:flex;flex-wrap:wrap;gap:5px;padding:10px 0 4px}
-  .port{font:600 10px/1 var(--mono);color:var(--faint);border:1px solid var(--line);
-    border-radius:4px;padding:4px 6px}
-  .port.on{color:var(--up);border-color:#cfe3d6;background:#f2f8f4}
-  .exp{flex:1;min-width:0;cursor:pointer}
-  .exp em{color:var(--faint);font-style:normal;font-size:11px}
-  .detail{white-space:pre-wrap;word-break:break-word;background:#f6f6f4;border:1px solid var(--line);
-    border-radius:6px;padding:9px 10px;margin:7px 0 2px;font:11px/1.5 var(--mono);
-    color:#2a2a2e;max-height:280px;overflow:auto}
+  /* toolbar — translucent material */
+  .toolbar{position:sticky;top:0;z-index:10;padding:14px 22px 12px;
+    background:color-mix(in srgb,var(--bg) 72%,transparent);
+    backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);
+    border-bottom:.5px solid var(--sep)}
+  .titlebar{display:flex;align-items:center;gap:12px}
+  .title{font-size:26px;font-weight:700;letter-spacing:-.02em}
+  .subtitle{color:var(--label2);font-size:14px}
+  .metrics{margin-left:auto;display:flex;gap:22px}
+  .metric{text-align:right} .metric b{font-size:19px;font-weight:680;letter-spacing:-.01em}
+  .metric span{display:block;color:var(--label2);font-size:11px;font-weight:590;
+    text-transform:uppercase;letter-spacing:.04em}
+  .actions{display:flex;align-items:center;gap:9px;margin-top:13px;flex-wrap:wrap}
+  /* buttons (HIG) */
+  button{font:inherit;cursor:pointer;border:0;border-radius:var(--r2);padding:7px 15px;
+    font-weight:590;font-size:14px;transition:.15s}
+  .btn{background:var(--fill);color:var(--blue)} .btn:hover{background:var(--fill2)}
+  .btn.primary{background:var(--blue);color:#fff} .btn.primary:hover{filter:brightness(1.06)}
+  .llm{margin-left:auto;color:var(--label2);font-size:12.5px;display:flex;align-items:center;gap:6px}
+  .llm:before{content:"";width:7px;height:7px;border-radius:50%;background:var(--green)}
+  /* iOS switch */
+  .switch{position:relative;display:inline-block;width:42px;height:26px}
+  .switch input{opacity:0;width:0;height:0}
+  .track{position:absolute;inset:0;background:var(--fill2);border-radius:13px;transition:.22s}
+  .knob{position:absolute;top:2px;left:2px;width:22px;height:22px;background:#fff;border-radius:50%;
+    box-shadow:0 1px 3px rgba(0,0,0,.25);transition:.22s}
+  .switch input:checked+.track{background:var(--green)}
+  .switch input:checked+.track .knob{transform:translateX(16px)}
+  .swrap{display:flex;align-items:center;gap:7px;color:var(--label2);font-size:13px}
+  /* segmented control */
+  .seg{display:inline-flex;background:var(--fill);border-radius:9px;padding:2px}
+  .seg button{background:transparent;color:var(--label);border-radius:7px;padding:4px 12px;font-size:13px;font-weight:510}
+  .seg button.on{background:var(--card);box-shadow:0 1px 3px rgba(0,0,0,.14);font-weight:590}
+  /* layout */
+  .wrap{display:grid;grid-template-columns:1fr 380px;gap:20px;padding:20px 22px 48px;max-width:1500px}
+  @media(max-width:980px){.wrap{grid-template-columns:1fr}}
+  .shead{font-size:13px;font-weight:600;color:var(--label2);padding:4px 8px 9px;letter-spacing:-.01em}
+  /* card / grouped list */
+  .card{background:var(--card);border-radius:var(--r);box-shadow:0 1px 2px rgba(0,0,0,.05);margin-bottom:18px;overflow:hidden}
+  .chead{display:flex;align-items:center;gap:10px;padding:13px 16px;border-bottom:.5px solid var(--sep)}
+  .chead h3{margin:0;font-size:16px;font-weight:640;letter-spacing:-.01em}
+  .chead .note{margin-left:auto;color:var(--label2);font-size:13px}
+  .cbody{padding:6px 0}
+  .row{display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:.5px solid var(--sep)}
+  .row:last-child{border-bottom:0}
+  .empty{color:var(--label3);font-size:13.5px;padding:16px}
+  /* device grid */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:13px}
+  .dev{background:var(--card);border-radius:var(--r);box-shadow:0 1px 2px rgba(0,0,0,.05);
+    padding:14px 15px;display:flex;gap:12px;align-items:flex-start}
+  .ico{width:38px;height:38px;border-radius:10px;background:var(--fill);display:grid;place-items:center;
+    font-size:20px;flex:none}
+  .dev .nm{font-weight:600;font-size:15.5px;outline:none;letter-spacing:-.01em;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .dev .nm:focus{box-shadow:inset 0 -2px 0 var(--blue)}
+  .dev .sub{color:var(--label2);font-size:13px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .dev .addr{color:var(--label3);font-size:11px;font-family:var(--mono);margin-top:4px}
+  .dev .body{min-width:0;flex:1}
+  .pres{width:9px;height:9px;border-radius:50%;flex:none;margin-top:5px}
+  .pres.up{background:var(--green)} .pres.away{background:var(--label3)}
+  .trust{margin-top:9px;display:flex;gap:6px;align-items:center}
+  .trust select{font:inherit;font-size:12px;color:var(--label2);background:var(--fill);border:0;
+    border-radius:7px;padding:3px 8px}
+  .trust a{font-size:12px;color:var(--blue);text-decoration:none}
+  /* honeypot ports grid */
+  .ports{display:flex;flex-wrap:wrap;gap:6px;padding:12px 16px 4px}
+  .port{font:590 11px/1 var(--mono);color:var(--label2);background:var(--fill);
+    border-radius:7px;padding:6px 8px}
+  .port.on{color:var(--green);background:color-mix(in srgb,var(--green) 14%,transparent)}
+  /* generic feed rows */
+  .k{font:590 11px/1.5 var(--mono);color:var(--label3);text-transform:uppercase;flex:none;width:60px}
+  .k.green{color:var(--green)} .k.orange{color:var(--orange)} .k.red{color:var(--red)} .k.blue{color:var(--blue)}
+  .ft{flex:1;min-width:0;font-size:13.5px;overflow:hidden;text-overflow:ellipsis}
+  .when{color:var(--label3);font-size:11.5px;margin-left:auto;flex:none}
+  .exp{cursor:pointer} .exp em{font-style:normal;color:var(--label3);font-size:11.5px}
+  .detail{display:none;white-space:pre-wrap;word-break:break-word;background:var(--card2);
+    border-radius:9px;padding:10px 12px;margin:8px 16px 4px;font:11.5px/1.55 var(--mono);
+    color:var(--label);max-height:300px;overflow:auto;border:.5px solid var(--sep)}
+  .detail.show{display:block}
+  .tag{font-size:11px;font-weight:600;padding:2px 7px;border-radius:6px;background:var(--fill);color:var(--label2)}
+  footer{color:var(--label3);font-size:12px;text-align:center;padding:8px 22px 30px}
 </style>
 </head>
 <body>
-<header>
-  <span class="word">gamekeeper</span>
-  <span class="tag">who's on your land</span>
-  <div class="stats" id="stats"></div>
-</header>
-<div class="bar">
-  <button class="solid" id="scan">Scan now</button>
-  <button id="active" title="ping-sweep with nmap (louder)">Deep scan</button>
-  <button id="autolabel" title="let the LLM name + type every device">✦ Auto-label</button>
-  <button id="cap" title="Wireshark-style packet capture → .pcap">◉ Capture 10s</button>
-  <span id="llmbadge" class="llmbadge"></span>
-  <label style="margin-left:auto"><input type="checkbox" id="auto" checked> auto-refresh</label>
-  <span id="when"></span>
-</div>
-<div class="wrap">
-  <main>
-    <h2>Devices</h2>
-    <div class="grid" id="devices"></div>
-  </main>
-  <div class="rail">
-    <h2>Honeypot <span class="llmbadge" id="hpstat"></span></h2>
-    <div class="panel"><div class="ports" id="hpports"></div><ul class="feed" id="probes"></ul></div>
-    <h2>Wireshark capture</h2><div class="panel"><ul class="feed" id="captures"></ul></div>
-    <h2>LLM activity <span class="llmbadge" id="llmsrc"></span></h2>
-    <div class="panel"><ul class="feed" id="llm"></ul></div>
-    <h2>Activity</h2><div class="panel"><ul class="feed" id="events"></ul></div>
-    <h2>Bans</h2><div class="panel"><ul class="feed" id="bans"></ul></div>
+<div class="toolbar">
+  <div class="titlebar">
+    <span class="title">gamekeeper</span>
+    <span class="subtitle">who's on your land</span>
+    <div class="metrics" id="metrics"></div>
+  </div>
+  <div class="actions">
+    <button class="btn primary" id="scan">Scan</button>
+    <button class="btn" id="active">Deep scan</button>
+    <button class="btn" id="autolabel">Auto-label</button>
+    <label class="swrap"><span class="switch"><input type="checkbox" id="auto" checked><span class="track"><span class="knob"></span></span></span>Auto-refresh</label>
+    <span class="llm" id="llm"></span>
   </div>
 </div>
-<footer id="foot">Use only on networks you own or are authorised to monitor.</footer>
+
+<div class="wrap">
+  <main>
+    <div class="shead">Devices</div>
+    <div class="grid" id="devices"></div>
+  </main>
+  <aside>
+    <!-- Honeypot widget -->
+    <section class="card">
+      <div class="chead"><h3>Honeypot</h3><span class="note" id="hpnote"></span></div>
+      <div class="ports" id="hpports"></div>
+      <div class="cbody"><div id="probes"></div></div>
+    </section>
+    <!-- Wireshark capture widget -->
+    <section class="card">
+      <div class="chead"><h3>Packet capture</h3>
+        <div class="seg" id="capseg" style="margin-left:auto">
+          <button data-s="10" class="on">10s</button><button data-s="30">30s</button><button data-s="60">60s</button>
+        </div>
+        <button class="btn primary" id="cap" style="margin-left:8px">Capture</button>
+      </div>
+      <div class="cbody"><div id="captures"></div></div>
+    </section>
+    <!-- LLM activity widget -->
+    <section class="card">
+      <div class="chead"><h3>LLM activity</h3><span class="note" id="llmsrc"></span></div>
+      <div class="cbody"><div id="llmfeed"></div></div>
+    </section>
+    <!-- Events + bans -->
+    <section class="card">
+      <div class="chead"><h3>Activity</h3></div>
+      <div class="cbody"><div id="events"></div></div>
+    </section>
+    <section class="card">
+      <div class="chead"><h3>Bans</h3></div>
+      <div class="cbody"><div id="bans"></div></div>
+    </section>
+  </aside>
+</div>
+<footer>Use only on networks you own or are authorised to monitor.</footer>
 
 <script>
-const TYPE={phone:"PH",computer:"PC","network-gear":"NET",router:"NET",printer:"PRN",
-  camera:"CAM",nas:"NAS",media:"TV","voice-assistant":"VA",iot:"IOT","smart-home":"IOT",
-  sbc:"SBC",server:"SRV","apple-device":"APL","mobile-or-iot":"MOB","computer-or-nas":"PC"};
-const $=s=>document.querySelector(s);
-function rel(ts){if(!ts)return"";const d=(Date.now()-new Date(ts).getTime())/1000;
-  if(d<60)return"just now";if(d<3600)return Math.floor(d/60)+"m";if(d<86400)return Math.floor(d/3600)+"h";
-  return Math.floor(d/86400)+"d";}
-function esc(s){return(s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+const ICON={phone:"📱",tablet:"📱",computer:"💻","apple-device":"💻",router:"📡","network-gear":"📡",
+  printer:"🖨️",camera:"📷",nas:"🗄️",media:"📺","voice-assistant":"🔊",iot:"💡","smart-home":"💡",
+  sbc:"🍓",server:"🖥️","mobile-or-iot":"📱","computer-or-nas":"💻",unknown:"❔"};
+let CAPS=10;
+const $=s=>document.querySelector(s), A=s=>[...document.querySelectorAll(s)];
+function esc(s){return(s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+function rel(t){if(!t)return"";let d=(Date.now()-new Date(t).getTime())/1e3;
+  return d<60?"now":d<3600?(d/60|0)+"m":d<86400?(d/3600|0)+"h":(d/86400|0)+"d"}
+function kb(n){n=n||0;return n>1e6?(n/1048576).toFixed(1)+" MB":n>1e3?Math.round(n/1024)+" KB":n+" B"}
 
 async function load(){
-  const s=await (await fetch("/api/state")).json();
-  const c=s.counts;
-  $("#stats").innerHTML=[["present",c.present],["known",c.total],["unlabelled",c.unknown],
-    ["probes",c.probes],["bans",c.bans]].map(([k,v])=>
-    `<span class="stat"><b>${v}</b><span>${k}</span></span>`).join("");
-  $("#devices").innerHTML = s.devices.length ? s.devices.map(card).join("") :
-    `<div class="empty">No devices yet — hit “Scan now”.</div>`;
-  $("#events").innerHTML = feed(s.events, e=>`${esc(e.detail||"")}`, e=>e.kind, e=>e.severity);
-  $("#probes").innerHTML = s.probes.length ? feed(s.probes,
-    p=>`${esc(p.src_ip)} → :${p.dst_port} ${esc(p.service||p.proto||"")}`, ()=>"probe", ()=>"warn")
-    : `<li class="empty">Honeypot idle — start it with <span class="mono">gamekeeper honeypot</span>.</li>`;
-  $("#bans").innerHTML = s.bans.length ? feed(s.bans,
-    b=>`${esc(b.ip)} — ${esc(b.reason)}${b.applied?"":" (planned)"}`, ()=>"ban", ()=>"bad")
-    : `<li class="empty">None.</li>`;
-  if(s.llm){$("#llmbadge").textContent="LLM · "+s.llm.detail; $("#llmsrc").textContent=s.llm.source;}
-  $("#llm").innerHTML=(s.llm_calls&&s.llm_calls.length)?s.llm_calls.map(llmRow).join("")
-    :`<li class="empty">No LLM calls yet — hit ✦ Auto-label or run a report.</li>`;
-  if(s.honeypot){$("#hpstat").textContent=s.honeypot.armed+"/"+s.honeypot.ports.length+" armed";
-    $("#hpports").innerHTML=s.honeypot.ports.map(p=>`<span class="port ${p.listening?'on':''}">${p.port} ${esc(p.service)}</span>`).join("");}
+  const s=await(await fetch("/api/state")).json(), c=s.counts;
+  $("#metrics").innerHTML=[["present",c.present],["devices",c.total],["probes",c.probes],["bans",c.bans]]
+    .map(([k,v])=>`<div class="metric"><b>${v}</b><span>${k}</span></div>`).join("");
+  if(s.llm){$("#llm").textContent=s.llm.detail;$("#llmsrc").textContent=s.llm.source}
+  $("#devices").innerHTML=s.devices.length?s.devices.map(dev).join(""):`<div class="empty">No devices yet — tap Scan.</div>`;
+  // honeypot
+  if(s.honeypot){$("#hpnote").textContent=s.honeypot.armed+" of "+s.honeypot.ports.length+" ports armed";
+    $("#hpports").innerHTML=s.honeypot.ports.map(p=>`<span class="port ${p.listening?'on':''}">${p.port} ${esc(p.service)}</span>`).join("")}
+  $("#probes").innerHTML=s.probes.length?s.probes.slice(0,30).map(p=>row("orange",p.service||"tcp",
+    `${esc(p.src_ip)} → port ${p.dst_port}`,p.ts)).join(""):`<div class="empty">No probes yet — the honeypot is waiting.</div>`;
+  // captures
   $("#captures").innerHTML=(s.captures&&s.captures.length)?s.captures.map(capRow).join("")
-    :`<li class="empty">No captures yet — hit ◉ Capture.</li>`;
-  $("#when").textContent="updated "+new Date().toLocaleTimeString();
-  bindLabels(); bindExpand();
+    :`<div class="empty">No captures yet — tap Capture for a Wireshark pcap.</div>`;
+  // llm
+  $("#llmfeed").innerHTML=(s.llm_calls&&s.llm_calls.length)?s.llm_calls.map(llmRow).join("")
+    :`<div class="empty">No LLM calls yet — tap Auto-label.</div>`;
+  $("#events").innerHTML=s.events.length?s.events.slice(0,30).map(e=>row(sev(e.severity),e.kind,esc(e.detail||""),e.ts)).join(""):`<div class="empty">Quiet.</div>`;
+  $("#bans").innerHTML=s.bans.length?s.bans.map(b=>row("red","ban",`${esc(b.ip)} — ${esc(b.reason)}${b.applied?"":" · planned"}`,b.ts)).join(""):`<div class="empty">None.</div>`;
+  bind();
 }
-function llmRow(e){return `<li><span class="k">${esc(e.purpose||'llm')}</span><span class="exp">${esc((e.prompt||'').slice(0,52))}… <em>${esc(e.source)}${e.ok?'':' ✗'}</em><pre class="detail" hidden>PROMPT\n${esc(e.prompt||'')}\n\nRESPONSE\n${esc(e.response||'(none)')}</pre></span><time>${rel(e.ts)}</time></li>`;}
-function capRow(e){const f=(e.pcap||'').split('/').pop();return `<li><span class="k">pcap</span><span class="exp">${esc(e.iface||'')} · ${fmtB(e.bytes)} <em>${esc(f)}</em><pre class="detail" hidden>${esc(e.summary||'(no summary)')}\n\nopen:  wireshark ${esc(e.pcap||'')}</pre></span><time>${rel(e.ts)}</time></li>`;}
-function fmtB(n){n=n||0;return n>1e6?(n/1e6).toFixed(1)+'MB':n>1e3?Math.round(n/1e3)+'KB':n+'B';}
-function bindExpand(){document.querySelectorAll(".exp").forEach(el=>el.onclick=()=>{const d=el.querySelector(".detail");if(d)d.hidden=!d.hidden;});}
-function card(d){
-  const t=TYPE[d.dtype]||"?", trust=d.trust||"unknown";
-  const host=d.label?"":(d.hostname||"");
-  return `<div class="card ${trust}">
-    <div class="row1"><span class="dot ${d.present?'up':'away'}"></span>
-      <span class="badge">${t}</span>
-      <span class="label" contenteditable data-mac="${d.mac}">${esc(d.label||d.hostname||d.ip||d.mac)}</span></div>
-    <div class="meta">${esc(d.vendor||'unknown vendor')}${d.randomized?' · randomized':''}</div>
-    <div class="mac">${esc(d.ip||'')} · ${esc(d.mac)} · seen ${rel(d.last_seen)}${host?(' · '+esc(host)):''}</div>
-    <div class="ctl">
-      <select data-mac="${d.mac}" class="trust">
-        ${["known","guest","unknown","blocked"].map(o=>`<option ${o==trust?'selected':''}>${o}</option>`).join("")}
-      </select>
-      <a href="#" class="report" data-mac="${d.mac}">behaviour report ↗</a>
-    </div></div>`;
+function sev(x){return x==="bad"?"red":x==="warn"?"orange":x==="notice"?"green":"blue"}
+function dev(d){const t=d.dtype||"unknown",ic=ICON[t]||"❔",tr=d.trust||"unknown";
+  return `<div class="dev"><div class="ico">${ic}</div><div class="body">
+    <div class="nm" contenteditable data-mac="${d.mac}">${esc(d.label||d.hostname||d.ip||d.mac)}</div>
+    <div class="sub">${esc(d.vendor||'Unknown vendor')}${d.randomized?' · private MAC':''}</div>
+    <div class="addr">${esc(d.ip||'')} · ${esc(d.mac)} · ${rel(d.last_seen)}</div>
+    <div class="trust">
+      <select data-mac="${d.mac}" class="tsel">${["known","guest","unknown","blocked"].map(o=>`<option ${o==tr?'selected':''}>${o}</option>`).join("")}</select>
+      <a href="#" class="rep" data-mac="${d.mac}">Report</a>
+    </div></div><span class="pres ${d.present?'up':'away'}"></span></div>`;
 }
-function feed(items,txt,kind,sev){return items.slice(0,40).map(e=>
-  `<li><span class="k ${esc(sev(e)||'')}">${esc(kind(e))}</span><span>${txt(e)}</span>
-   <time>${rel(e.ts)}</time></li>`).join("");}
-function bindLabels(){
-  document.querySelectorAll(".label").forEach(el=>el.onblur=()=>save(el.dataset.mac,{label:el.textContent.trim()}));
-  document.querySelectorAll(".label").forEach(el=>el.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();el.blur();}});
-  document.querySelectorAll(".trust").forEach(el=>el.onchange=()=>save(el.dataset.mac,{trust:el.value}).then(load));
-  document.querySelectorAll(".report").forEach(el=>el.onclick=e=>{e.preventDefault();
-    alert("Run:  gamekeeper report "+el.dataset.mac+"\\n(LLM behaviour report — pairs with saddlerFitter)");});
+function row(cls,k,txt,ts){return `<div class="row"><span class="k ${cls}">${esc(k)}</span><span class="ft">${txt}</span><span class="when">${rel(ts)}</span></div>`}
+function llmRow(e){return `<div class="row exp" onclick="this.nextElementSibling.classList.toggle('show')">
+  <span class="k blue">${esc(e.purpose||'llm')}</span>
+  <span class="ft">${esc((e.prompt||'').slice(0,46))}… <em>${esc(e.source)}${e.ok?'':' ✗'}</em></span>
+  <span class="when">${rel(e.ts)}</span></div>
+  <pre class="detail">PROMPT\n${esc(e.prompt||'')}\n\nRESPONSE\n${esc(e.response||'(none)')}</pre>`}
+function capRow(e){const f=(e.pcap||'').split('/').pop();return `<div class="row exp" onclick="this.nextElementSibling.classList.toggle('show')">
+  <span class="k green">pcap</span>
+  <span class="ft">${esc(e.iface||'')} · <em>${kb(e.bytes)}</em> · ${esc(f)}</span>
+  <span class="when">${rel(e.ts)}</span></div>
+  <pre class="detail">${esc(e.summary||'(no summary)')}\n\nOpen in Wireshark:  ${esc(e.pcap||'')}</pre>`}
+
+function bind(){
+  A(".nm").forEach(el=>{el.onblur=()=>save(el.dataset.mac,{label:el.textContent.trim()});
+    el.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();el.blur()}}});
+  A(".tsel").forEach(el=>el.onchange=()=>save(el.dataset.mac,{trust:el.value}).then(load));
+  A(".rep").forEach(el=>el.onclick=e=>{e.preventDefault();
+    alert("Run:  gamekeeper report "+el.dataset.mac+"\\nLLM behaviour report — pairs with saddlerFitter.")});
 }
-async function save(mac,patch){return fetch("/api/label",{method:"POST",
-  headers:{"Content-Type":"application/json"},body:JSON.stringify({mac,...patch})});}
-async function scan(active){const b=active?$("#active"):$("#scan");const o=b.textContent;
-  b.textContent="scanning…";await fetch("/api/scan",{method:"POST",
-  headers:{"Content-Type":"application/json"},body:JSON.stringify({active})});b.textContent=o;load();}
-$("#scan").onclick=()=>scan(false); $("#active").onclick=()=>scan(true);
-$("#cap").onclick=async()=>{const b=$("#cap"),o=b.textContent;b.textContent="capturing…";
-  try{await fetch("/api/capture",{method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({seconds:10})});}finally{b.textContent=o;load();}};
-$("#autolabel").onclick=async()=>{const b=$("#autolabel"),o=b.textContent;b.textContent="labelling…";
-  try{const r=await(await fetch("/api/autolabel",{method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({all:true})})).json();
-    if(r.autolabel&&r.autolabel.source==="none")alert("No LLM available — install saddlerFitter or the claude CLI.");}
-  finally{b.textContent=o;load();}};
-setInterval(()=>{if($("#auto").checked)load();},15000);
+const save=(mac,p)=>fetch("/api/label",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mac,...p})});
+async function post(url,b,btn){const o=btn&&btn.textContent;if(btn)btn.textContent="…";
+  try{await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(b||{})})}
+  finally{if(btn)btn.textContent=o;load()}}
+$("#scan").onclick=e=>post("/api/scan",{},e.target);
+$("#active").onclick=e=>post("/api/scan",{active:true},e.target);
+$("#autolabel").onclick=e=>post("/api/autolabel",{all:true},e.target);
+$("#cap").onclick=e=>post("/api/capture",{seconds:CAPS},e.target);
+A("#capseg button").forEach(b=>b.onclick=()=>{A("#capseg button").forEach(x=>x.classList.remove("on"));
+  b.classList.add("on");CAPS=+b.dataset.s});
+setInterval(()=>{if($("#auto").checked)load()},15000);
 load();
 </script>
 </body>
