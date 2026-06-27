@@ -149,6 +149,21 @@ def _capture(args) -> int:
     return capture.cli(args)
 
 
+def _analyze(args) -> int:
+    from . import analyze
+    return analyze.cli(args)
+
+
+def _identify(args) -> int:
+    from . import identify
+    return identify.cli(args)
+
+
+def _chat(args) -> int:
+    from . import chat
+    return chat.cli(args)
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="gamekeeper",
                                 description="Know who's on your land, and keep it safe.")
@@ -205,11 +220,22 @@ def main(argv=None) -> int:
     cp.add_argument("--bpf", default=None, help="BPF filter, e.g. 'host 192.168.1.42'")
     cp.add_argument("--summary", action="store_true", help="print protocol breakdown (tshark)")
 
+    an = sub.add_parser("analyze", help="LLM reads a pcap for malicious calls / lurkers")
+    an.add_argument("pcap", help="path to a .pcap")
+
+    idn = sub.add_parser("identify", help="nmap a device to map ports/OS and de-anonymise it")
+    idn.add_argument("target", help="IP address")
+    idn.add_argument("--deep", action="store_true", help="also OS detection (slower, needs privilege)")
+
+    ch = sub.add_parser("chat", help="ask the model about your network")
+    ch.add_argument("text", help="your question")
+
     args = p.parse_args(argv)
     return {
         "scan": _scan, "list": _list, "label": _label, "label-auto": _label_auto,
         "watch": _watch, "serve": _serve, "monitor": _monitor, "honeypot": _honeypot,
         "ban": _ban, "report": _report, "capture": _capture,
+        "analyze": _analyze, "identify": _identify, "chat": _chat,
     }[args.cmd](args)
 
 

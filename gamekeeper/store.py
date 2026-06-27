@@ -15,7 +15,7 @@ from . import config
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS devices (
   mac TEXT PRIMARY KEY, ip TEXT, iface TEXT, vendor TEXT, hostname TEXT,
-  dtype TEXT, label TEXT, notes TEXT,
+  dtype TEXT, label TEXT, notes TEXT, ports TEXT, os TEXT,
   randomized INTEGER DEFAULT 0, present INTEGER DEFAULT 1,
   trust TEXT DEFAULT 'unknown',          -- known | guest | unknown | blocked
   first_seen TEXT, last_seen TEXT, times_seen INTEGER DEFAULT 1
@@ -39,9 +39,19 @@ CREATE TABLE IF NOT EXISTS llm_calls (
 );
 CREATE TABLE IF NOT EXISTS captures (
   id INTEGER PRIMARY KEY, ts TEXT, iface TEXT, seconds INTEGER, pcap TEXT,
-  bytes INTEGER, summary TEXT
+  bytes INTEGER, summary TEXT, analysis TEXT
+);
+CREATE TABLE IF NOT EXISTS messages (
+  id INTEGER PRIMARY KEY, ts TEXT, role TEXT, nick TEXT, text TEXT
 );
 """
+
+# Columns added after the first release — applied idempotently for existing DBs.
+_MIGRATIONS = [
+    "ALTER TABLE devices ADD COLUMN ports TEXT",
+    "ALTER TABLE devices ADD COLUMN os TEXT",
+    "ALTER TABLE captures ADD COLUMN analysis TEXT",
+]
 
 
 class Store:
@@ -50,6 +60,11 @@ class Store:
         os.makedirs(os.path.dirname(self.path), exist_ok=True)
         with self._con() as c:
             c.executescript(_SCHEMA)
+            for stmt in _MIGRATIONS:
+                try:
+                    c.execute(stmt)
+                except sqlite3.OperationalError:
+                    pass  # column already exists
 
     @contextmanager
     def _con(self):
@@ -107,6 +122,21 @@ class Store:
         args.append(mac)
         with self._con() as c:
             c.execute(f"UPDATE devices SET {', '.join(sets)} WHERE mac=?", args)
+
+    def set_ports(self, mac: str, ports_json: str, os_guess: str = None):
+        with self._con() as c:
+            c.execute("UPDATE devices SET ports=?, os=COALESCE(?,os) WHERE mac=?",
+                      (ports_json, os_guess, mac))
+
+    def device_by_ip(self, ip: str) -> dict | None:
+        with self._con() as c:
+            r = c.execute("SELECT * FROM devices WHERE ip=? ORDER BY present DESC, last_seen DESC LIMIT 1",
+                          (ip,)).fetchone()
+            return dict(r) if r else None
+
+    def set_capture_analysis(self, pcap: str, text: str):
+        with self._con() as c:
+            c.execute("UPDATE captures SET analysis=? WHERE pcap=?", (text, pcap))
 
     def devices(self) -> list[dict]:
         with self._con() as c:
@@ -177,6 +207,18 @@ class Store:
         with self._con() as c:
             return [dict(r) for r in c.execute(
                 "SELECT * FROM captures ORDER BY id DESC LIMIT ?", (limit,))]
+
+    # --- chat ------------------------------------------------------------------
+    def add_message(self, role, text, now, nick=""):
+        with self._con() as c:
+            c.execute("INSERT INTO messages(ts,role,nick,text) VALUES (?,?,?,?)",
+                      (now, role, nick, text))
+
+    def messages(self, limit=60) -> list[dict]:
+        with self._con() as c:
+            rows = [dict(r) for r in c.execute(
+                "SELECT * FROM messages ORDER BY id DESC LIMIT ?", (limit,))]
+            return list(reversed(rows))
 
     def counts(self) -> dict:
         with self._con() as c:

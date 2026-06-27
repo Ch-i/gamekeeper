@@ -70,9 +70,15 @@ def autolabel(store: Store | None = None, *, relabel_all=False) -> dict:
         devs = [d for d in devs if not d.get("label")]
     if not devs:
         return {"labelled": 0, "source": src, "note": "nothing to label"}
+    def _ports(d):
+        try:
+            return [p.get("port") for p in json.loads(d.get("ports") or "[]")]
+        except Exception:
+            return []
     payload = [{"mac": d["mac"], "ip": d.get("ip"), "vendor": d.get("vendor"),
                 "hostname": d.get("hostname"), "randomized": bool(d.get("randomized")),
-                "guess_type": d.get("dtype")} for d in devs]
+                "guess_type": d.get("dtype"), "open_ports": _ports(d), "os": d.get("os")}
+               for d in devs]
     out = llm.run(PROMPT.format(devs=json.dumps(payload, indent=2)),
                   store=store, purpose="label-auto")
     arr = _extract_json(out) or []

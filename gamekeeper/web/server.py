@@ -26,6 +26,7 @@ def _state(store: Store) -> dict:
         "llm_calls": store.llm_calls(40),
         "honeypot": sinkhole.status(),
         "captures": store.captures(20),
+        "messages": store.messages(60),
         "monitor": {"iface": config.MON_IFACE or "",
                     "tools": {"airmon-ng": bool(config.AIRMON_BIN), "iw": bool(config.IW_BIN),
                               "tshark": bool(config.TSHARK_BIN), "tcpdump": bool(config.TCPDUMP_BIN)}},
@@ -80,6 +81,25 @@ class Handler(BaseHTTPRequestHandler):
                                    datetime.now(timezone.utc).isoformat(timespec="seconds"))
             st = _state(self.store)
             st["capture"] = {**res, "summary": summ, "bytes": nbytes}
+            return self._send(200, json.dumps(st, default=str))
+        if self.path == "/api/identify":
+            from .. import identify
+            res = identify.identify(data.get("ip", ""), store=self.store, deep=bool(data.get("deep")))
+            st = _state(self.store)
+            st["identify"] = res
+            return self._send(200, json.dumps(st, default=str))
+        if self.path == "/api/analyze":
+            from .. import analyze
+            res = analyze.analyze(data.get("pcap", ""), store=self.store)
+            st = _state(self.store)
+            st["analyze"] = {"pcap": res.get("pcap"), "analysis": res.get("analysis"),
+                             "error": res.get("error", "")}
+            return self._send(200, json.dumps(st, default=str))
+        if self.path == "/api/chat":
+            from .. import chat
+            res = chat.reply(data.get("text", ""), store=self.store)
+            st = _state(self.store)
+            st["chat"] = res
             return self._send(200, json.dumps(st, default=str))
         if self.path == "/api/autolabel":
             from ..labeler import autolabel
