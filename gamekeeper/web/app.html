@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>gamekeeper</title>
+<style>
+  :root{
+    --bg:#FAFAF8; --panel:#ffffff; --ink:#17181b; --muted:#74757c; --faint:#9a9ba1;
+    --line:#ececec; --accent:#2f6b4f; --up:#2f6b4f; --warn:#b5862b; --bad:#a23b3b;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased}
+  header{display:flex;align-items:baseline;gap:18px;padding:22px 30px 18px;border-bottom:1px solid var(--line)}
+  .word{font-size:20px;font-weight:680;letter-spacing:-.02em}
+  .tag{color:var(--muted);font-size:13px}
+  .stats{margin-left:auto;display:flex;gap:26px;align-items:baseline}
+  .stat b{font-size:19px;font-weight:680} .stat span{color:var(--faint);font-size:11px;
+    text-transform:uppercase;letter-spacing:.08em;margin-left:6px}
+  button{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);
+    padding:7px 14px;border-radius:6px;cursor:pointer}
+  button:hover{border-color:var(--accent);color:var(--accent)}
+  button.solid{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .bar{display:flex;gap:10px;align-items:center;padding:14px 30px;color:var(--muted);font-size:13px}
+  .wrap{display:grid;grid-template-columns:1fr 360px;gap:24px;padding:6px 30px 40px}
+  @media(max-width:960px){.wrap{grid-template-columns:1fr}}
+  h2{font-size:12px;font-weight:640;text-transform:uppercase;letter-spacing:.09em;
+    color:var(--faint);margin:18px 2px 12px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(248px,1fr));gap:12px}
+  .card{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:8px;
+    padding:14px 15px 13px 18px;overflow:hidden}
+  .card:before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--faint)}
+  .card.known:before{background:var(--up)} .card.guest:before{background:var(--warn)}
+  .card.blocked:before{background:var(--bad)} .card.unknown:before{background:#d8d8d6}
+  .row1{display:flex;align-items:center;gap:9px}
+  .badge{font:600 10px/1 var(--mono);color:var(--muted);border:1px solid var(--line);
+    border-radius:4px;padding:4px 5px;letter-spacing:.04em}
+  .dot{width:8px;height:8px;border-radius:50%;flex:none}
+  .dot.up{background:var(--up)} .dot.away{background:transparent;border:1.5px solid #cfcfce}
+  .label{font-weight:620;font-size:15px;outline:none;flex:1;min-width:0;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .label:focus{box-shadow:inset 0 -2px 0 var(--accent)}
+  .meta{color:var(--muted);font-size:12.5px;margin-top:7px}
+  .mac{font-family:var(--mono);font-size:11px;color:var(--faint);margin-top:3px}
+  .ctl{display:flex;gap:6px;margin-top:10px;opacity:0;transition:.12s}
+  .card:hover .ctl{opacity:1}
+  .ctl select,.ctl a{font-size:11px;color:var(--muted);border:1px solid var(--line);
+    border-radius:5px;padding:3px 7px;background:var(--panel);text-decoration:none}
+  .ctl a:hover{color:var(--accent);border-color:var(--accent)}
+  .rail .panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;
+    padding:6px 14px;margin-bottom:16px}
+  .feed{font-size:13px} .feed li{list-style:none;padding:9px 0;border-bottom:1px solid var(--line);
+    display:flex;gap:9px} .feed li:last-child{border:0}
+  .feed .k{font:600 10px/1.6 var(--mono);color:var(--faint);text-transform:uppercase;flex:none;width:64px}
+  .feed .k.notice{color:var(--accent)} .feed .k.warn{color:var(--warn)} .feed .k.bad{color:var(--bad)}
+  .feed time{color:var(--faint);font-size:11px;margin-left:auto;flex:none}
+  .empty{color:var(--faint);font-size:13px;padding:14px 2px}
+  footer{color:var(--faint);font-size:12px;padding:16px 30px 30px;border-top:1px solid var(--line)}
+  .mono{font-family:var(--mono)}
+</style>
+</head>
+<body>
+<header>
+  <span class="word">gamekeeper</span>
+  <span class="tag">who's on your land</span>
+  <div class="stats" id="stats"></div>
+</header>
+<div class="bar">
+  <button class="solid" id="scan">Scan now</button>
+  <button id="active" title="ping-sweep with nmap (louder)">Deep scan</button>
+  <label style="margin-left:auto"><input type="checkbox" id="auto" checked> auto-refresh</label>
+  <span id="when"></span>
+</div>
+<div class="wrap">
+  <main>
+    <h2>Devices</h2>
+    <div class="grid" id="devices"></div>
+  </main>
+  <div class="rail">
+    <h2>Activity</h2><div class="panel"><ul class="feed" id="events"></ul></div>
+    <h2>Probes caught</h2><div class="panel"><ul class="feed" id="probes"></ul></div>
+    <h2>Bans</h2><div class="panel"><ul class="feed" id="bans"></ul></div>
+  </div>
+</div>
+<footer id="foot">Use only on networks you own or are authorised to monitor.</footer>
+
+<script>
+const TYPE={phone:"PH",computer:"PC","network-gear":"NET",router:"NET",printer:"PRN",
+  camera:"CAM",nas:"NAS",media:"TV","voice-assistant":"VA",iot:"IOT","smart-home":"IOT",
+  sbc:"SBC",server:"SRV","apple-device":"APL","mobile-or-iot":"MOB","computer-or-nas":"PC"};
+const $=s=>document.querySelector(s);
+function rel(ts){if(!ts)return"";const d=(Date.now()-new Date(ts).getTime())/1000;
+  if(d<60)return"just now";if(d<3600)return Math.floor(d/60)+"m";if(d<86400)return Math.floor(d/3600)+"h";
+  return Math.floor(d/86400)+"d";}
+function esc(s){return(s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+
+async function load(){
+  const s=await (await fetch("/api/state")).json();
+  const c=s.counts;
+  $("#stats").innerHTML=[["present",c.present],["known",c.total],["unlabelled",c.unknown],
+    ["probes",c.probes],["bans",c.bans]].map(([k,v])=>
+    `<span class="stat"><b>${v}</b><span>${k}</span></span>`).join("");
+  $("#devices").innerHTML = s.devices.length ? s.devices.map(card).join("") :
+    `<div class="empty">No devices yet — hit “Scan now”.</div>`;
+  $("#events").innerHTML = feed(s.events, e=>`${esc(e.detail||"")}`, e=>e.kind, e=>e.severity);
+  $("#probes").innerHTML = s.probes.length ? feed(s.probes,
+    p=>`${esc(p.src_ip)} → :${p.dst_port} ${esc(p.service||p.proto||"")}`, ()=>"probe", ()=>"warn")
+    : `<li class="empty">Honeypot idle — start it with <span class="mono">gamekeeper honeypot</span>.</li>`;
+  $("#bans").innerHTML = s.bans.length ? feed(s.bans,
+    b=>`${esc(b.ip)} — ${esc(b.reason)}${b.applied?"":" (planned)"}`, ()=>"ban", ()=>"bad")
+    : `<li class="empty">None.</li>`;
+  $("#when").textContent="updated "+new Date().toLocaleTimeString();
+  bindLabels();
+}
+function card(d){
+  const t=TYPE[d.dtype]||"?", trust=d.trust||"unknown";
+  const host=d.label?"":(d.hostname||"");
+  return `<div class="card ${trust}">
+    <div class="row1"><span class="dot ${d.present?'up':'away'}"></span>
+      <span class="badge">${t}</span>
+      <span class="label" contenteditable data-mac="${d.mac}">${esc(d.label||d.hostname||d.ip||d.mac)}</span></div>
+    <div class="meta">${esc(d.vendor||'unknown vendor')}${d.randomized?' · randomized':''}</div>
+    <div class="mac">${esc(d.ip||'')} · ${esc(d.mac)} · seen ${rel(d.last_seen)}${host?(' · '+esc(host)):''}</div>
+    <div class="ctl">
+      <select data-mac="${d.mac}" class="trust">
+        ${["known","guest","unknown","blocked"].map(o=>`<option ${o==trust?'selected':''}>${o}</option>`).join("")}
+      </select>
+      <a href="#" class="report" data-mac="${d.mac}">behaviour report ↗</a>
+    </div></div>`;
+}
+function feed(items,txt,kind,sev){return items.slice(0,40).map(e=>
+  `<li><span class="k ${esc(sev(e)||'')}">${esc(kind(e))}</span><span>${txt(e)}</span>
+   <time>${rel(e.ts)}</time></li>`).join("");}
+function bindLabels(){
+  document.querySelectorAll(".label").forEach(el=>el.onblur=()=>save(el.dataset.mac,{label:el.textContent.trim()}));
+  document.querySelectorAll(".label").forEach(el=>el.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();el.blur();}});
+  document.querySelectorAll(".trust").forEach(el=>el.onchange=()=>save(el.dataset.mac,{trust:el.value}).then(load));
+  document.querySelectorAll(".report").forEach(el=>el.onclick=e=>{e.preventDefault();
+    alert("Run:  gamekeeper report "+el.dataset.mac+"\\n(LLM behaviour report — pairs with saddlerFitter)");});
+}
+async function save(mac,patch){return fetch("/api/label",{method:"POST",
+  headers:{"Content-Type":"application/json"},body:JSON.stringify({mac,...patch})});}
+async function scan(active){const b=active?$("#active"):$("#scan");const o=b.textContent;
+  b.textContent="scanning…";await fetch("/api/scan",{method:"POST",
+  headers:{"Content-Type":"application/json"},body:JSON.stringify({active})});b.textContent=o;load();}
+$("#scan").onclick=()=>scan(false); $("#active").onclick=()=>scan(true);
+setInterval(()=>{if($("#auto").checked)load();},15000);
+load();
+</script>
+</body>
+</html>

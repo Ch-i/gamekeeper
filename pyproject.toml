@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gamekeeper"
+version = "0.1.0"
+description = "Know who's on your network and keep it safe — device discovery + labelling, a Wi-Fi WIDS over an AWUS, a DNS sinkhole + honeypot, gated bans, and LLM behaviour reports. Authorised-use, human in the loop."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+keywords = ["network", "security", "device-discovery", "wids", "honeypot", "dns-sinkhole", "wireshark", "monitor-mode", "defense"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Security",
+    "Topic :: System :: Networking :: Monitoring",
+]
+# Core (discovery + dashboard) is pure standard library. Optional capabilities use external
+# CLIs (nmap, aircrack-ng/tshark, nftables) that are feature-detected at runtime, not pip deps.
+dependencies = []
+
+[project.optional-dependencies]
+knowledge = ["pyyaml>=6.0"]   # only if you load the threats.yaml catalog programmatically
+
+[project.scripts]
+gamekeeper = "gamekeeper.cli:main"
+
+[tool.setuptools]
+packages = ["gamekeeper", "gamekeeper.web"]
+
+[tool.setuptools.package-data]
+gamekeeper = ["web/*.html", "knowledge/*.md", "knowledge/*.yaml", "knowledge/*.txt"]

@@ -1,0 +1,39 @@
+# gamekeeper threat signatures — the defensive WIDS/behaviour catalog.
+# Each entry: how it's detected and what it means. Machine-readable companion to
+# STRATEGY.md; the monitor/defense modules key off these ids.
+version: 1
+signatures:
+  - id: WIFI-DEAUTH-FLOOD
+    layer: wifi
+    title: Deauthentication flood
+    detect: "802.11 frames with wlan.fc.type_subtype == 0x0c above N in a short window"
+    means: "clients are being forced to disconnect — often the prelude to an evil twin"
+    severity: high
+
+  - id: WIFI-EVIL-TWIN
+    layer: wifi
+    title: Evil twin / rogue AP
+    detect: "a beacon advertising a known SSID from an unseen BSSID or channel"
+    means: "an attacker is impersonating your access point to capture traffic"
+    severity: critical
+
+  - id: NET-ARP-SPOOF
+    layer: lan
+    title: ARP spoofing
+    detect: "one MAC answering for multiple IPs, or gratuitous ARP rebinding the gateway"
+    means: "man-in-the-middle on the wired/Wi-Fi LAN"
+    severity: high
+
+  - id: HOST-PROBE-SCAN
+    layer: host
+    title: Probing / port scan
+    detect: "a single source hitting multiple honeypot decoy ports (>= threshold)"
+    means: "reconnaissance from a bot or unauthorised host — a ban candidate"
+    severity: medium
+
+  - id: DEV-NEW-UNKNOWN
+    layer: lan
+    title: New unknown device
+    detect: "a MAC never seen before joins the neighbour table"
+    means: "could be a guest, or an unauthorised device — label it"
+    severity: notice

@@ -1,0 +1,12 @@
+# gamekeeper DNS sinkhole blocklist — domains answered with 0.0.0.0.
+# Seed list; append your own, or merge a maintained list (StevenBlack, oisd, etc.).
+# One domain per line; '#' comments; subdomains match by suffix.
+doubleclick.net
+googleadservices.com
+google-analytics.com
+ads.yahoo.com
+adservice.google.com
+app-measurement.com
+graph.facebook.com
+analytics.tiktok.com
+telemetry.microsoft.com
