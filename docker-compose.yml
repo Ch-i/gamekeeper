@@ -13,7 +13,8 @@ services:
     container_name: gamekeeper
     network_mode: host
     cap_add: [NET_ADMIN, NET_RAW]
-    volumes: [gkdata:/data]
+    environment: ["PYTHONUNBUFFERED=1"]
+    volumes: ["./gamekeeper/state:/data"]   # shared with the host (LLM labelling runs there)
     command: ["serve", "--host", "0.0.0.0"]   # http://<host>:8278
     restart: unless-stopped
 
@@ -22,7 +23,8 @@ services:
     container_name: gamekeeper-honeypot
     network_mode: host                         # bind the well-known decoy ports on the host
     cap_add: [NET_ADMIN, NET_RAW]
-    volumes: [gkdata:/data]
+    environment: ["PYTHONUNBUFFERED=1"]
+    volumes: ["./gamekeeper/state:/data"]   # shared with the host (LLM labelling runs there)
     command: ["honeypot"]
     restart: unless-stopped
     depends_on: [dashboard]
@@ -36,13 +38,11 @@ services:
     profiles: [wifi]
     network_mode: host
     privileged: true                           # monitor mode needs full Wi-Fi access
-    volumes: [gkdata:/data]
+    volumes: ["./gamekeeper/state:/data"]   # shared with the host (LLM labelling runs there)
     devices:
       - /dev/bus/usb:/dev/bus/usb              # AWUS036 USB passthrough
     environment:
       - GAMEKEEPER_MON_IFACE=${GAMEKEEPER_MON_IFACE:-wlan0mon}
+      - PYTHONUNBUFFERED=1
     command: ["monitor", "--iface", "${GAMEKEEPER_MON_IFACE:-wlan0mon}"]
     restart: unless-stopped
-
-volumes:
-  gkdata:

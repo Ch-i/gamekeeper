@@ -21,10 +21,15 @@ from datetime import datetime, timezone
 from . import config
 from .store import Store
 
-# decoy port -> service name (the services bots probe most)
-DECOYS = {21: "ftp", 23: "telnet", 2323: "telnet", 22: "ssh", 80: "http", 8080: "http",
-          445: "smb", 3389: "rdp", 5555: "adb", 1433: "mssql", 3306: "mysql",
-          6379: "redis", 9200: "elastic", 5900: "vnc"}
+# decoy port -> service name (the services bots probe most). Deliberately EXCLUDES
+# common real services on a host (22 ssh, 80 http, 443, 445 smb, 3389 rdp): the honeypot
+# uses host networking, so binding those could shadow a real service. The bind also skips
+# any port already in use, and refuses :22 outright (see NEVER_BIND).
+DECOYS = {21: "ftp", 23: "telnet", 2323: "telnet", 2222: "ssh", 5555: "adb",
+          1433: "mssql", 3306: "mysql", 6379: "redis", 9200: "elastic", 5900: "vnc",
+          8080: "http", 8443: "https"}
+# Ports we refuse to bind even if asked — shadowing these would be dangerous.
+NEVER_BIND = {22}
 BANNERS = {"ftp": b"220 (vsFTPd 3.0.3)\r\n", "telnet": b"\xff\xfb\x01login: ",
            "ssh": b"SSH-2.0-OpenSSH_8.9p1\r\n", "http": b"HTTP/1.1 200 OK\r\nServer: nginx\r\n\r\n",
            "redis": b"-NOAUTH Authentication required.\r\n", "mysql": b"\x4a\x00\x00\x00\x0a"}
@@ -58,6 +63,8 @@ def _handle(conn, addr, port, service, store):
 
 
 def _listen(port, service, store, stop) -> str:
+    if port in NEVER_BIND:
+        return f"  :{port:<5} {service:8} — REFUSED (never shadow SSH)"
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     try:
